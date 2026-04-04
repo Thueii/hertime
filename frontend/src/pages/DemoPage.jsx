@@ -652,6 +652,13 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
   const chartData = chartView === "day" ? chartDaily : chartView === "month" ? toMonthly(chartDaily) : toYearly(chartDaily)
   const chartTotalHrt = chartDaily.reduce((s, d) => s + d.hrt, 0)
 
+  // serviceId → tag 反查表（必须在早返回之前）
+  const serviceTagMap = useMemo(() => {
+    const map = {}
+    myServices.forEach(s => { map[s.id] = s.tag })
+    return map
+  }, [myServices])
+
   if (loading) return <div style={{ color: "#6b7280", textAlign: "center", padding: 40 }}>加载中...</div>
 
   // 把 Firebase 详情注入真实链上记录
@@ -676,13 +683,6 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
     : score
   const mergedSkills = registered ? skills.map((s, i) => s || MOCK_SKILLS[i]) : [...skills]
   const unlockedCount = mergedSkills.filter(Boolean).length
-
-  // serviceId → tag 反查表（给真实流水补充服务类型）
-  const serviceTagMap = useMemo(() => {
-    const map = {}
-    myServices.forEach(s => { map[s.id] = s.tag })
-    return map
-  }, [myServices])
 
   // HRT 流水：真实链上 + 转账(Firebase) + mock
   const transferFlowsMapped = transferFlows.map(f => ({
