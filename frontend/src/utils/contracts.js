@@ -11,6 +11,7 @@ const DEPLOYED_BY_CHAIN = {
 // ABIs - 只包含前端需要的函数
 const TOKEN_ABI = [
   "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
   "function registered(address) view returns (bool)",
   "event WelcomeMint(address indexed member, uint256 amount)",
   "event ServiceMint(address indexed provider, uint256 amount, bytes32 indexed serviceId)",
