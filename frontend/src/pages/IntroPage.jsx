@@ -39,22 +39,33 @@ export default function IntroPage({ onEnterDemo }) {
               HerTime 相信：<strong style={{ color: "#f9a8d4" }}>女性之间的互助，可以构成一张跨越时间的安全网。</strong>
               年轻时帮助别人，年老时由人帮助——不靠金钱，不靠运气，靠每一小时真实付出积累的信任。
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, margin: "4px 0 8px" }}>
-              {[
-                { label: "存时间", desc: "低龄或健康女性为高龄、半失能女性提供服务，1小时 = 1时间币" },
-                { label: "取时间", desc: "未来自己需要时，用时间币兑换等时服务，也可转赠给亲友。" },
-                { label: "不可买卖", desc: "时间币只能通过真实服务获得，禁止金钱交易——这是底线，也是这套系统公平性的根基" },
-              ].map(({ label, desc }) => (
-                <div key={label} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <span style={{ color: "#f9a8d4", fontWeight: 700, whiteSpace: "nowrap", minWidth: 60 }}>· {label}</span>
-                  <span style={{ color: "#d1d5db", fontSize: 15, lineHeight: 1.6 }}>{desc}</span>
-                </div>
-              ))}
-            </div>
             <p style={s.originText}>
-              传统时间银行的积分锁死在单一平台，平台停运一切清零，跨城市更是无从兑换。
+              传统互助平台锁死在单一平台，平台停运一切清零，跨城市更是无从兑换。
               HerTime 用智能合约重建信任：<strong style={{ color: "#f9a8d4" }}>Token 存在你自己的钱包，平台可以倒闭，你的付出永远存在。</strong>
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 规则理念 ─────────────────────────────────────────── */}
+      <section style={{ ...s.section, background: "rgba(249,168,212,0.04)", borderTop: "1px solid rgba(249,168,212,0.1)", borderBottom: "1px solid rgba(249,168,212,0.1)" }}>
+        <div style={s.sectionInner}>
+          <SectionLabel>规则理念</SectionLabel>
+          <h2 style={s.h2}>三条规则，一套契约</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, marginTop: 8 }}>
+            {[
+              { icon: "🕐", label: "存时间", desc: "低龄或健康女性为高龄、半失能女性提供服务，1 小时铸造 1 枚 HRT 时间币，存入自己的链上钱包。陪同就医、代取药、手机教学、日常家务、情绪陪伴——每一种付出都算数。" },
+              { icon: "🌸", label: "取时间", desc: "未来自己需要照护时，用积累的 HRT 兑换等时服务。也可以转赠给异地父母，让她们在当地兑换——一句附言，跨越千里，把善意传递给最想守护的人。" },
+              { icon: "⚖️", label: "不可买卖", desc: "HRT 只能通过真实服务获得，禁止金钱交易。不管你是教授还是保洁员，你付出的 1 小时陪伴，价值完全相等。这是底线，也是这套系统公平性的根基。" },
+            ].map(({ icon, label, desc }) => (
+              <div key={label} style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+                <div style={{ fontSize: 32, lineHeight: 1, marginTop: 2 }}>{icon}</div>
+                <div>
+                  <div style={{ color: "#f9a8d4", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>{label}</div>
+                  <div style={{ color: "#d1d5db", fontSize: 15, lineHeight: 1.7 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
