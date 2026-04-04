@@ -376,7 +376,7 @@ export default function IntroPage({ onEnterDemo }) {
               你付出的 1 小时陪伴，<strong style={{ color: "#f9a8d4" }}>价值完全相等。</strong>
             </p>
             <p style={{ ...s.originText, fontSize: 16, lineHeight: 1.9, borderLeft: "3px solid #f9a8d4", paddingLeft: 20, marginTop: 8 }}>
-              我的初心很简单：打造一个女性养老的乌托邦，用时间重新定义价值，而不是用金钱。
+              我们的初心很简单：打造一个女性养老的乌托邦，用时间重新定义价值，而不是用金钱。
               <br />HerTime，就是那个天平。
             </p>
           </div>
