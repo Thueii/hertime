@@ -10,7 +10,7 @@ export default function IntroPage({ onEnterDemo }) {
           <p style={s.heroSub}>那些不被看见的付出，从此有迹可循</p>
           <div style={s.heroDivider} />
           <p style={s.heroDesc}>
-            基于区块链的女性互助时间银行协议，用链上 Token 记录每一小时的付出
+            基于区块链的女性互助养老时间银行协议，用链上 Token 记录每一小时的付出
           </p>
           <div style={s.badges}>
             <span style={s.badge}>Avalanche Fuji Testnet</span>
@@ -30,19 +30,30 @@ export default function IntroPage({ onEnterDemo }) {
           <h2 style={s.h2}>这个项目是怎么来的</h2>
           <div style={s.originBlock}>
             <p style={s.originText}>
-              随着老龄化加剧，<strong style={{ color: "#f9a8d4" }}>互助养老</strong>正在成为无数家庭的真实需求——
-              邻里之间的陪伴、就医协助、情绪疏导，这些看不见的付出每天都在发生，
-              却缺少一个可信的方式被记录、被承认、被回馈。
+              有一种善意，每天都在发生，却从未被看见——
+              邻居阿姨陪你去看病，楼上姐姐教你用手机，
+              素不相识的女性，在彼此最需要的时候出现。
+              这种善意不应该消失在空气里，它应该被记住，被传递，有一天回到她自己身上。
             </p>
             <p style={s.originText}>
-              传统的互助平台存在一个结构性问题：积分和记录存在平台的数据库，
-              <strong style={{ color: "#f9a8d4" }}>数据归平台所有，不归用户所有</strong>。
-              平台维护中断、机构换届、资金断档，都可能让用户多年的付出变得无从查证。
-              上海时间银行近期的暂停维护，让这个问题再次被看见。
+              HerTime 相信：<strong style={{ color: "#f9a8d4" }}>女性之间的互助，可以构成一张跨越时间的安全网。</strong>
+              年轻时帮助别人，年老时由人帮助——不靠金钱，不靠运气，靠每一小时真实付出积累的信任。
             </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, margin: "4px 0 8px" }}>
+              {[
+                { label: "存时间", desc: "低龄或健康女性为高龄、半失能女性提供服务，1小时 = 1时间币" },
+                { label: "取时间", desc: "未来自己需要时，用时间币兑换等时服务，也可转赠给亲友。" },
+                { label: "不可买卖", desc: "时间币只能通过真实服务获得，禁止金钱交易——这是底线，也是这套系统公平性的根基" },
+              ].map(({ label, desc }) => (
+                <div key={label} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ color: "#f9a8d4", fontWeight: 700, whiteSpace: "nowrap", minWidth: 60 }}>· {label}</span>
+                  <span style={{ color: "#d1d5db", fontSize: 15, lineHeight: 1.6 }}>{desc}</span>
+                </div>
+              ))}
+            </div>
             <p style={s.originText}>
-              HerTime 用智能合约重建这套信任机制：时间 Token 存在你自己的钱包，
-              声誉记录写在链上永不消失。平台可以倒闭，但你帮助过别人的证明将永远存在。
+              传统时间银行的积分锁死在单一平台，平台停运一切清零，跨城市更是无从兑换。
+              HerTime 用智能合约重建信任：<strong style={{ color: "#f9a8d4" }}>Token 存在你自己的钱包，平台可以倒闭，你的付出永远存在。</strong>
             </p>
           </div>
         </div>
