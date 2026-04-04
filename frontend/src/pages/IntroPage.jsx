@@ -55,8 +55,8 @@ export default function IntroPage({ onEnterDemo }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 28, marginTop: 8 }}>
             {[
               { icon: "🕐", label: "存时间", desc: "低龄或健康女性为高龄、半失能女性提供服务，1 小时铸造 1 枚 HRT 时间币，存入自己的链上钱包。陪同就医、代取药、手机教学、日常家务、情绪陪伴——每一种付出都算数。" },
-              { icon: "🌸", label: "取时间", desc: "未来自己需要照护时，用积累的 HRT 兑换等时服务。也可以转赠给异地父母，让她们在当地兑换——一句附言，跨越千里，把善意传递给最想守护的人。" },
-              { icon: "⚖️", label: "不可买卖", desc: "HRT 只能通过真实服务获得，禁止金钱交易。不管你是教授还是保洁员，你付出的 1 小时陪伴，价值完全相等。这是底线，也是这套系统公平性的根基。" },
+              { icon: "🌸", label: "取时间", desc: "未来自己需要时，用时间币兑换等时服务，也可转赠给亲友。" },
+              { icon: "⚖️", label: "不可买卖", desc: "时间币只能通过服务获得，禁止金钱交易——这是底线" },
             ].map(({ icon, label, desc }) => (
               <div key={label} style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
                 <div style={{ fontSize: 32, lineHeight: 1, marginTop: 2 }}>{icon}</div>
