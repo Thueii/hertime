@@ -162,9 +162,9 @@ export default function IntroPage({ onEnterDemo }) {
           <div style={s.featureGrid}>
             {[
               {
-                icon: "💰", color: "#8b5cf6", title: "HRT 时间代币",
-                subtitle: "ERC-20 · 0.1h 精度",
-                desc: "1 HRT = 1 小时服务。最小精度 0.1h，链上用 tenthHours × 1e17 存储。注册赠送 2 HRT，服务完成后自动 mint 给服务方、burn 需求方等量。",
+                icon: "💰", color: "#8b5cf6", title: "HRT 时间代币 · 转赠",
+                subtitle: "ERC-20 · 0.1h 精度 · 自由流通",
+                desc: "1 HRT = 1 小时服务。服务完成自动结算，也可直接转赠给家人——女儿帮社区积累的时长，可以转给外地的父母使用，真正跨地域流通。支持填写附言，记录每一笔转赠的心意。",
               },
               {
                 icon: "🤝", color: "#3b82f6", title: "服务生命周期",
@@ -199,7 +199,7 @@ export default function IntroPage({ onEnterDemo }) {
               {
                 icon: "📊", color: "#a855f7", title: "The Graph 索引 · HRT 流水",
                 subtitle: "AssemblyScript · 5 实体",
-                desc: "索引 4 个合约事件，个人主页「HRT 流水」标签通过一次 GraphQL 查询即返回全部收入/支出明细，展示注册奖励/服务收入/服务消费时间线，附总收入/总支出/净增汇总。",
+                desc: "索引 4 个合约事件，个人主页「HRT 流水」标签一次 GraphQL 查询返回全部明细：注册奖励、服务收入/消费、转账收入/支出均有记录，附言可见，总收入/总支出/净增一目了然。",
               },
             ].map((f) => (
               <div key={f.title} style={{ ...s.featureCard, borderColor: f.color + "33" }}>
