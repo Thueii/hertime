@@ -153,7 +153,7 @@ export default function IntroPage({ onEnterDemo }) {
       <section style={s.section}>
         <div style={s.sectionInner}>
           <SectionLabel>核心功能</SectionLabel>
-          <h2 style={s.h2}>八大功能模块</h2>
+          <h2 style={s.h2}>核心功能模块</h2>
           <div style={s.featureGrid}>
             {[
               {
@@ -192,9 +192,9 @@ export default function IntroPage({ onEnterDemo }) {
                 desc: "部署者自动获得邀请资格，已注册成员可邀请新人，管理员可批量邀请。链上验证防止滥注册，保障互助社群质量。",
               },
               {
-                icon: "📊", color: "#a855f7", title: "The Graph 索引",
+                icon: "📊", color: "#a855f7", title: "The Graph 索引 · HRT 流水",
                 subtitle: "AssemblyScript · 5 实体",
-                desc: "实时索引 4 个合约的 13 种事件，支持按状态/类型/用户分页查询。前端可从 N 次合约调用降级为单次 GraphQL 查询。",
+                desc: "索引 4 个合约事件，个人主页「HRT 流水」标签通过一次 GraphQL 查询即返回全部收入/支出明细，展示注册奖励/服务收入/服务消费时间线，附总收入/总支出/净增汇总。",
               },
             ].map((f) => (
               <div key={f.title} style={{ ...s.featureCard, borderColor: f.color + "33" }}>
@@ -503,6 +503,7 @@ const s = {
     padding: "80px 24px 80px",
     textAlign: "center",
     minHeight: "100vh",
+    boxSizing: "border-box",
     display: "flex",
     alignItems: "center",
   },

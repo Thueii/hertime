@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup, Marker, useMapEvents, use
 import "leaflet/dist/leaflet.css"
 import { getContracts } from "../utils/contracts"
 import { reportLocation, removeLocation, saveServiceLocation, subscribeServiceLocations, subscribeLocations, saveServiceDetail, subscribeServiceDetails, saveContact, subscribeContacts, compressImageToBase64, saveServiceImages, subscribeAllServiceImages, saveActualHours, pushNotification, subscribeNotifications, markNotificationsRead, saveRatingComment, subscribeRatingComments, saveCancelReason, subscribeCancelReason } from "../utils/firebase"
+import { fetchMember } from "../utils/graphQueries"
 
 // 球面距离（km）
 function haversine(lat1, lng1, lat2, lng2) {
@@ -305,6 +306,21 @@ const MOCK_COMPLETED = 7
 const MOCK_SCORE_AVG = 462
 const MOCK_SKILLS    = [true, true, false, false, false, false] // 倾听者、就医陪伴点亮
 
+// ── HRT 流水 mock 数据（与 MOCK_ACCEPTED / MOCK_POSTED 对应）────
+const MOCK_HRT_FLOWS = [
+  { id: "mf-a1",  type: "earn",    amount: "1", tag: 1, timestamp: new Date("2026-03-29T20:00:00").getTime() / 1000 },
+  { id: "mf-a2",  type: "earn",    amount: "2", tag: 1, timestamp: new Date("2026-03-27T21:00:00").getTime() / 1000 },
+  { id: "mf-p1",  type: "spend",   amount: "2", tag: 1, timestamp: new Date("2026-03-28T19:00:00").getTime() / 1000 },
+  { id: "mf-a4",  type: "earn",    amount: "2", tag: 0, timestamp: new Date("2026-03-26T10:00:00").getTime() / 1000 },
+  { id: "mf-p2",  type: "spend",   amount: "3", tag: 2, timestamp: new Date("2026-03-25T14:00:00").getTime() / 1000 },
+  { id: "mf-a3",  type: "earn",    amount: "1", tag: 1, timestamp: new Date("2026-03-22T23:15:00").getTime() / 1000 },
+  { id: "mf-p3",  type: "spend",   amount: "1", tag: 0, timestamp: new Date("2026-03-20T09:30:00").getTime() / 1000 },
+  { id: "mf-a5",  type: "earn",    amount: "1", tag: 0, timestamp: new Date("2026-03-19T15:00:00").getTime() / 1000 },
+  { id: "mf-a6",  type: "earn",    amount: "2", tag: 3, timestamp: new Date("2026-03-18T14:00:00").getTime() / 1000 },
+  { id: "mf-a7",  type: "earn",    amount: "3", tag: 2, timestamp: new Date("2026-03-15T13:00:00").getTime() / 1000 },
+  { id: "mf-w1",  type: "welcome", amount: "2", tag: null, timestamp: new Date("2026-01-15T10:00:00").getTime() / 1000 },
+]
+
 // ── 图表 mock 历史数据 ────────────────────────────────────────
 const KNOWN_HRT = {
   "2026-03-31": 1, "2026-03-29": 1, "2026-03-27": 2, "2026-03-26": 2,
@@ -415,6 +431,32 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
   const [ratingComments, setRatingComments] = useState({})
   const [myReceivedScore, setMyReceivedScore] = useState(null)
   const [ratingsRevealed, setRatingsRevealed] = useState(false)
+  // HRT 流水（The Graph）
+  const [hrtFlows, setHrtFlows] = useState([])
+  const [flowLoading, setFlowLoading] = useState(false)
+  const [memberStats, setMemberStats] = useState(null)
+
+  // 从 The Graph 拉取 HRT 流水记录
+  useEffect(() => {
+    if (!account) return
+    setFlowLoading(true)
+    fetchMember(account)
+      .then(data => {
+        if (!data) return
+        setMemberStats({ hrtEarned: data.hrtEarned, hrtSpent: data.hrtSpent })
+        const flows = (data.hrtFlows || []).map(f => ({
+          id: f.type + "-" + f.timestamp,
+          type: f.type,
+          amount: ethers.formatEther(f.amount),
+          serviceId: f.serviceId,
+          timestamp: Number(f.timestamp),
+          tag: null,
+        })).sort((a, b) => b.timestamp - a.timestamp)
+        setHrtFlows(flows)
+      })
+      .catch(() => {})
+      .finally(() => setFlowLoading(false))
+  }, [account])
 
   // 订阅 Firebase 服务详情、图片、位置
   useEffect(() => {
@@ -596,6 +638,13 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
   const mergedSkills = registered ? skills.map((s, i) => s || MOCK_SKILLS[i]) : [...skills]
   const unlockedCount = mergedSkills.filter(Boolean).length
 
+  // HRT 流水：真实数据 + 已注册时叠加 mock
+  const mergedFlows = registered
+    ? [...hrtFlows, ...MOCK_HRT_FLOWS].sort((a, b) => b.timestamp - a.timestamp)
+    : hrtFlows
+  const totalEarned = mergedFlows.filter(f => f.type !== "spend").reduce((s, f) => s + parseFloat(f.amount), 0)
+  const totalSpent  = mergedFlows.filter(f => f.type === "spend").reduce((s, f) => s + parseFloat(f.amount), 0)
+
   const recordItem = (s, role) => (
     <div key={s.id} onClick={() => setSelectedRecord({ ...s, role })}
       style={{
@@ -728,6 +777,7 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
               {[
                 { key: "accepted", label: "我接单的服务", count: accepted.length, color: "#34d399", bg: "rgba(52,211,153,0.15)" },
                 { key: "posted",   label: "我发起的需求", count: posted.length,   color: "#c4b5fd", bg: "rgba(139,92,246,0.2)" },
+                { key: "flows",    label: "HRT 流水",      count: mergedFlows.length, color: "#fbbf24", bg: "rgba(251,191,36,0.15)" },
               ].map(({ key, label, count, color, bg }) => {
                 const active = (recordTab || "accepted") === key
                 return (
@@ -744,12 +794,71 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
                 )
               })}
             </div>
-            {/* 单列记录列表 */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {((recordTab || "accepted") === "accepted" ? accepted : posted).map(s =>
-                recordItem(s, (recordTab || "accepted") === "accepted" ? "provider" : "requester")
-              )}
-            </div>
+
+            {/* HRT 流水列表 */}
+            {(recordTab === "flows") ? (
+              <div>
+                {/* 汇总行 */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+                  {[
+                    { label: "总收入", value: `+${totalEarned.toFixed(1)}`, color: "#34d399", bg: "rgba(52,211,153,0.06)" },
+                    { label: "总支出", value: `-${totalSpent.toFixed(1)}`,  color: "#f87171", bg: "rgba(239,68,68,0.06)" },
+                    { label: "净增",   value: `${(totalEarned - totalSpent).toFixed(1)}`, color: "#c4b5fd", bg: "rgba(139,92,246,0.06)" },
+                  ].map(item => (
+                    <div key={item.label} style={{ background: item.bg, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
+                      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>{item.label}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: item.color }}>{item.value} <span style={{ fontSize: 11 }}>HRT</span></div>
+                    </div>
+                  ))}
+                </div>
+                {/* 数据来源标注 */}
+                <div style={{ fontSize: 11, color: "#374151", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ color: "#34d399" }}>●</span> 链上数据来自 The Graph 索引
+                  {flowLoading && <span style={{ color: "#6b7280" }}>  加载中...</span>}
+                </div>
+                {/* 流水列表 */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {mergedFlows.map(f => {
+                    const isEarn = f.type !== "spend"
+                    const label = f.type === "welcome" ? "注册奖励" : f.type === "earn" ? "服务收入" : "服务消费"
+                    const isMock = f.id?.startsWith("mf-")
+                    const date = new Date(f.timestamp * 1000).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+                    return (
+                      <div key={f.id} style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "10px 14px", borderRadius: 10, background: "#0f0f1a",
+                        borderLeft: `2px solid ${isEarn ? "#34d399" : "#f87171"}`,
+                      }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                          background: isEarn ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 15,
+                        }}>{f.type === "welcome" ? "🎁" : isEarn ? "↑" : "↓"}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#d1d5db" }}>{label}</span>
+                            {f.tag !== null && <span style={{ fontSize: 11, color: "#6b7280" }}>{TAG_EMOJIS[f.tag]} {TAG_NAMES[f.tag]}</span>}
+                            {isMock && <span style={{ fontSize: 10, color: "#374151", border: "1px solid #2d2d3d", borderRadius: 4, padding: "1px 5px" }}>样本</span>}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#4b5563", marginTop: 2 }}>{date}</div>
+                        </div>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: isEarn ? "#34d399" : "#f87171", flexShrink: 0 }}>
+                          {isEarn ? "+" : "-"}{parseFloat(f.amount).toFixed(1)} <span style={{ fontSize: 11 }}>HRT</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* 单列记录列表 */
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {((recordTab || "accepted") === "accepted" ? accepted : posted).map(s =>
+                  recordItem(s, (recordTab || "accepted") === "accepted" ? "provider" : "requester")
+                )}
+              </div>
+            )}
           </Card>
         </div>
 
@@ -808,19 +917,19 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
             onClick={() => setSelectedRecord(null)}>
-            <div style={{ background: "#1f1f2e", border: "1px solid #2d2d3d", borderRadius: 14, width: 440, maxWidth: "92vw" }}
+            <div style={{ background: "#1f1f2e", border: "1px solid #2d2d3d", borderRadius: 16, width: 720, maxWidth: "96vw", maxHeight: "90vh", overflow: "auto" }}
               onClick={e => e.stopPropagation()}>
               {/* 顶部色条 */}
-              <div style={{ height: 3, borderRadius: "14px 14px 0 0", background: `linear-gradient(90deg, ${TAG_COLORS[r.tag]}, transparent)` }} />
+              <div style={{ height: 3, borderRadius: "16px 16px 0 0", background: `linear-gradient(90deg, ${TAG_COLORS[r.tag]}, transparent)` }} />
               {/* 头部 */}
-              <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #2d2d3d", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ padding: "18px 24px 14px", borderBottom: "1px solid #2d2d3d", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 32 }}>{TAG_EMOJIS[r.tag]}</span>
+                  <span style={{ fontSize: 30 }}>{TAG_EMOJIS[r.tag]}</span>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 17, color: "#e5e7eb" }}>{TAG_NAMES[r.tag]}</div>
                     <div style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
                       {r.hours} 小时 · <span style={{
-                        color: r.status === 2 ? "#34d399" : r.status === 1 ? "#fbbf24" : "#c4b5fd"
+                        color: r.status === 2 ? "#34d399" : r.status === 1 ? "#fbbf24" : r.status === 3 ? "#f87171" : "#c4b5fd"
                       }}>{STATUS_NAMES[r.status]}</span> · {isRequester ? "我发起" : "我接单"}
                     </div>
                   </div>
@@ -828,197 +937,199 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
                 <button onClick={() => setSelectedRecord(null)} style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 20 }}>✕</button>
               </div>
 
-              <div style={{ padding: "18px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
-                {/* 服务说明 */}
-                {r.detail?.desc ? (
+              {/* 双列主体 */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+
+                {/* 左列：服务说明 + 图片 + 地图 */}
+                <div style={{ padding: "18px 20px", borderRight: "1px solid #2d2d3d", display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* 服务说明 */}
                   <div>
-                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>服务说明</div>
-                    <div style={{ fontSize: 14, color: "#d1d5db", lineHeight: 1.7, background: "#0f0f1a", borderRadius: 8, padding: "12px 14px" }}>
-                      {r.detail.desc}
-                    </div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>服务说明</div>
+                    {r.detail?.desc
+                      ? <div style={{ fontSize: 13, color: "#d1d5db", lineHeight: 1.7, background: "#0f0f1a", borderRadius: 8, padding: "10px 12px" }}>{r.detail.desc}</div>
+                      : <div style={{ fontSize: 13, color: "#374151", fontStyle: "italic" }}>暂无服务说明</div>
+                    }
                   </div>
-                ) : (
-                  <div style={{ fontSize: 13, color: "#374151", fontStyle: "italic" }}>暂无服务说明</div>
-                )}
 
-                {/* 现场图片 */}
-                {svcImages[r.id]?.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>现场图片</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {svcImages[r.id].map((url, i) => (
-                        <img key={i} src={url} alt="" onClick={() => setLightboxSrc(url)}
-                          style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #2d2d3d", cursor: "zoom-in" }} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 时间 */}
-                {r.detail?.date && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#c4b5fd" }}>
-                    <span>🕐</span><span>{r.detail.date}</span>
-                  </div>
-                )}
-
-                {/* 见面地点地图 */}
-                {(() => {
-                  const loc = svcLocations[r.id]
-                  if (!loc) return null
-                  return (
+                  {/* 现场图片 */}
+                  {svcImages[r.id]?.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>见面地点</div>
-                      <div style={{ borderRadius: 10, overflow: "hidden", height: 160 }}>
-                        <MapContainer center={[loc.lat, loc.lng]} zoom={2} style={{ width: "100%", height: "100%" }} zoomControl={false}>
-                          <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-                          <FitBounds points={[[loc.lat, loc.lng]]} />
-                          <CircleMarker center={[loc.lat, loc.lng]} radius={10}
-                            pathOptions={{ color: "#8b5cf6", fillColor: "#8b5cf6", fillOpacity: 0.9, weight: 2 }} />
-                        </MapContainer>
-                      </div>
-                    </div>
-                  )
-                })()}
-
-                {/* 对方地址 + 评分 + 技能徽章 */}
-                {(r.detail?.other || (r.provider && r.provider !== ethers.ZeroAddress)) && (() => {
-                  const otherAddr = isRequester ? r.provider : r.actualRequester
-                  const mock = getMockForAddr(otherAddr)
-                  const displayScore = otherScore > 0 ? otherScore : mock.score
-                  const displaySkills = otherSkills?.some(Boolean) ? otherSkills : mock.skills
-                  return (
-                    <div style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 10, padding: "12px 14px" }}>
-                      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>{isRequester ? "服务方" : "需求方"}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, color: "#c4b5fd", fontFamily: "monospace" }}>
-                          {r.detail?.other || (otherAddr ? `${otherAddr.slice(0, 10)}...${otherAddr.slice(-8)}` : "")}
-                        </span>
-                        <span style={{ fontSize: 12, padding: "2px 10px", borderRadius: 10, background: "rgba(251,191,36,0.15)", color: "#fbbf24", fontWeight: 700 }}>
-                          ★ {(displayScore / 100).toFixed(2)}
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {displaySkills.map((has, i) => has ? (
-                          <span key={i} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 20, background: "rgba(139,92,246,0.2)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.3)" }}>
-                            {SKILL_EMOJIS[i]} {SKILL_NAMES[i]}
-                          </span>
-                        ) : null)}
-                      </div>
-                    </div>
-                  )
-                })()}
-
-                {/* HRT 结算 */}
-                {r.status === 2 && (
-                  <div style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#34d399" }}>
-                    ✓ {isRequester ? `已支付 ${r.hours} HRT` : `已获得 ${r.hours} HRT`}，链上永久记录
-                  </div>
-                )}
-
-                {/* 联系方式交换（进行中） */}
-                {r.status === 1 && !r.id?.startsWith("mock") && (() => {
-                  const myRole = isRequester ? "requester" : "provider"
-                  const otherRole = isRequester ? "provider" : "requester"
-                  const mySaved = contacts[myRole]?.contact
-                  const otherContact = contacts[otherRole]?.contact
-                  return (
-                    <div style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 10, padding: "14px 16px" }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#c4b5fd", marginBottom: 10 }}>💬 联系方式交换</div>
-                      {otherContact
-                        ? <div style={{ fontSize: 13, color: "#34d399", marginBottom: 8 }}>
-                            {isRequester ? "服务方" : "需求方"}：<strong>{otherContact}</strong>
-                          </div>
-                        : <div style={{ fontSize: 12, color: "#4b5563", marginBottom: 8 }}>对方尚未填写联系方式</div>
-                      }
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <input value={mySaved || contactInput} onChange={e => !mySaved && setContactInput(e.target.value)}
-                          readOnly={!!mySaved} placeholder="填写你的联系方式（微信/手机号等）"
-                          style={{ flex: 1, background: "#0f0f1a", border: "1px solid #2d2d3d", borderRadius: 8, padding: "8px 12px", color: mySaved ? "#6b7280" : "#e5e7eb", fontSize: 13 }} />
-                        {!mySaved && (
-                          <button onClick={async () => { if (!contactInput.trim()) return; setSavingContact(true); await saveContact(r.id, myRole, contactInput.trim()).catch(() => {}); setSavingContact(false) }}
-                            disabled={savingContact || !contactInput.trim()}
-                            style={{ background: contactInput.trim() ? "linear-gradient(135deg,#8b5cf6,#ec4899)" : "#374151", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>
-                            {savingContact ? "..." : "保存"}
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 11, color: "#4b5563", marginTop: 6 }}>仅双方可见</div>
-                    </div>
-                  )
-                })()}
-
-                {/* 收到的评价（双方都提交评分后可见） */}
-                {r.status === 2 && ratingsRevealed && !r.id?.startsWith("mock") && (
-                  <div style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 12, color: "#fbbf24", marginBottom: 8, fontWeight: 600 }}>⭐ 你收到的评价</div>
-                    {myReceivedScore !== null && (
-                      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-                        {[1,2,3,4,5].map(i => (
-                          <span key={i} style={{ fontSize: 18, color: i <= myReceivedScore ? "#f59e0b" : "#374151" }}>★</span>
+                      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>现场图片</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {svcImages[r.id].map((url, i) => (
+                          <img key={i} src={url} alt="" onClick={() => setLightboxSrc(url)}
+                            style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #2d2d3d", cursor: "zoom-in" }} />
                         ))}
-                        <span style={{ fontSize: 13, color: "#9ca3af", marginLeft: 6, alignSelf: "center" }}>{myReceivedScore} 星</span>
                       </div>
-                    )}
-                    {(() => {
-                      const otherAddr = isRequester ? r.provider?.toLowerCase() : r.actualRequester?.toLowerCase()
-                      const comment = otherAddr && ratingComments[otherAddr]?.comment
-                      return comment ? (
-                        <div style={{ fontSize: 13, color: "#d1d5db", lineHeight: 1.6, background: "#0f0f1a", borderRadius: 8, padding: "8px 12px" }}>
-                          "{comment}"
+                    </div>
+                  )}
+
+                  {/* 见面地点地图 */}
+                  {(() => {
+                    const loc = svcLocations[r.id]
+                    if (!loc) return null
+                    return (
+                      <div>
+                        <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>见面地点</div>
+                        <div style={{ borderRadius: 10, overflow: "hidden", height: 180 }}>
+                          <MapContainer center={[loc.lat, loc.lng]} zoom={2} style={{ width: "100%", height: "100%" }} zoomControl={false}>
+                            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                            <FitBounds points={[[loc.lat, loc.lng]]} />
+                            <CircleMarker center={[loc.lat, loc.lng]} radius={10}
+                              pathOptions={{ color: "#8b5cf6", fillColor: "#8b5cf6", fillOpacity: 0.9, weight: 2 }} />
+                          </MapContainer>
                         </div>
-                      ) : <div style={{ fontSize: 12, color: "#4b5563" }}>对方未留文字评价</div>
-                    })()}
-                  </div>
-                )}
+                      </div>
+                    )
+                  })()}
+                </div>
 
-                {/* 取消原因展示（已取消的服务） */}
-                {r.status === 3 && cancelReasonData && (
-                  <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
-                    <span style={{ color: "#f87171" }}>取消原因：</span>
-                    <span style={{ color: "#9ca3af" }}>{cancelReasonData.reason || "未填写"}</span>
-                  </div>
-                )}
+                {/* 右列：时间 + 对方 + HRT + 联系 + 评价 + 操作 */}
+                <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+                  {/* 时间 */}
+                  {r.detail?.date && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#c4b5fd", background: "#0f0f1a", borderRadius: 8, padding: "8px 12px" }}>
+                      <span>🕐</span><span>{r.detail.date}</span>
+                    </div>
+                  )}
 
-                {/* 操作按钮 */}
-                {!r.id?.startsWith("mock") && (r.status === 1 || r.status === 2) && (
-                  <div style={{ display: "flex", gap: 8, paddingTop: 4, alignItems: "center" }}>
-                    {r.status === 1 && (
-                      <Btn small onClick={async () => {
-                        if (isRequester) {
-                          setActualHoursInput(r.hours); setActualHoursNote(""); setConfirmModal(r)
-                          setSelectedRecord(null)
-                        } else {
-                          setSubmitting(true)
-                          try {
-                            await (await contracts.service.confirmCompletion(r.id)).wait()
-                            pushNotification(r.actualRequester, {
-                              type: "completed", serviceId: r.id,
-                              message: `你的${TAG_NAMES[r.tag]}服务已完成，可以去提交评分了！`
-                            }).catch(() => {})
-                            toast("确认成功！"); load(); setSelectedRecord(null)
-                          } catch (e) { toast(e.reason || e.message, "error") }
-                          setSubmitting(false)
+                  {/* 对方地址 + 评分 + 技能徽章 */}
+                  {(r.detail?.other || (r.provider && r.provider !== ethers.ZeroAddress)) && (() => {
+                    const otherAddr = isRequester ? r.provider : r.actualRequester
+                    const mock = getMockForAddr(otherAddr)
+                    const displayScore = otherScore > 0 ? otherScore : mock.score
+                    const displaySkills = otherSkills?.some(Boolean) ? otherSkills : mock.skills
+                    return (
+                      <div style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{isRequester ? "服务方" : "需求方"}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 12, color: "#c4b5fd", fontFamily: "monospace" }}>
+                            {r.detail?.other || (otherAddr ? `${otherAddr.slice(0, 8)}...${otherAddr.slice(-6)}` : "")}
+                          </span>
+                          <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 10, background: "rgba(251,191,36,0.15)", color: "#fbbf24", fontWeight: 700 }}>
+                            ★ {(displayScore / 100).toFixed(2)}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {displaySkills.map((has, i) => has ? (
+                            <span key={i} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(139,92,246,0.2)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.3)" }}>
+                              {SKILL_EMOJIS[i]} {SKILL_NAMES[i]}
+                            </span>
+                          ) : null)}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* HRT 结算 */}
+                  {r.status === 2 && (
+                    <div style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#34d399" }}>
+                      ✓ {isRequester ? `已支付 ${r.hours} HRT` : `已获得 ${r.hours} HRT`}，链上永久记录
+                    </div>
+                  )}
+
+                  {/* 联系方式交换（进行中） */}
+                  {r.status === 1 && !r.id?.startsWith("mock") && (() => {
+                    const myRole = isRequester ? "requester" : "provider"
+                    const otherRole = isRequester ? "provider" : "requester"
+                    const mySaved = contacts[myRole]?.contact
+                    const otherContact = contacts[otherRole]?.contact
+                    return (
+                      <div style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 10, padding: "12px 14px" }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#c4b5fd", marginBottom: 8 }}>💬 联系方式交换</div>
+                        {otherContact
+                          ? <div style={{ fontSize: 13, color: "#34d399", marginBottom: 8 }}>
+                              {isRequester ? "服务方" : "需求方"}：<strong>{otherContact}</strong>
+                            </div>
+                          : <div style={{ fontSize: 12, color: "#4b5563", marginBottom: 8 }}>对方尚未填写联系方式</div>
                         }
-                      }} disabled={submitting
-                        || (isRequester && r.requesterConfirmed)
-                        || (!isRequester && r.providerConfirmed)}>
-                        {(isRequester && r.requesterConfirmed) || (!isRequester && r.providerConfirmed) ? "已确认，等待对方" : "确认完成"}
-                      </Btn>
-                    )}
-                    {r.status === 2 && (
-                      <Btn small secondary onClick={() => { setShowRating(true); setRatingScore(5); setRatingComment("") }}>
-                        提交评分
-                      </Btn>
-                    )}
-                    {/* 取消按钮：进行中且发起人未确认（或发起人已确认但我是发起人） */}
-                    {r.status === 1 && !(r.requesterConfirmed && !isRequester) && (
-                      <button onClick={() => { setCancelModal(r); setCancelReason(""); setSelectedRecord(null) }}
-                        style={{ marginLeft: "auto", background: "none", border: "1px solid #374151", borderRadius: 8, padding: "6px 14px", color: "#6b7280", fontSize: 13, cursor: "pointer" }}>
-                        取消服务
-                      </button>
-                    )}
-                  </div>
-                )}
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <input value={mySaved || contactInput} onChange={e => !mySaved && setContactInput(e.target.value)}
+                            readOnly={!!mySaved} placeholder="微信/手机号等"
+                            style={{ flex: 1, background: "#0f0f1a", border: "1px solid #2d2d3d", borderRadius: 8, padding: "7px 10px", color: mySaved ? "#6b7280" : "#e5e7eb", fontSize: 13 }} />
+                          {!mySaved && (
+                            <button onClick={async () => { if (!contactInput.trim()) return; setSavingContact(true); await saveContact(r.id, myRole, contactInput.trim()).catch(() => {}); setSavingContact(false) }}
+                              disabled={savingContact || !contactInput.trim()}
+                              style={{ background: contactInput.trim() ? "linear-gradient(135deg,#8b5cf6,#ec4899)" : "#374151", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 13, cursor: "pointer" }}>
+                              {savingContact ? "..." : "保存"}
+                            </button>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#4b5563", marginTop: 5 }}>仅双方可见</div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* 收到的评价（双方都提交评分后可见） */}
+                  {r.status === 2 && ratingsRevealed && !r.id?.startsWith("mock") && (
+                    <div style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 10, padding: "10px 12px" }}>
+                      <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>⭐ 你收到的评价</div>
+                      {myReceivedScore !== null && (
+                        <div style={{ display: "flex", gap: 3, marginBottom: 6 }}>
+                          {[1,2,3,4,5].map(i => (
+                            <span key={i} style={{ fontSize: 16, color: i <= myReceivedScore ? "#f59e0b" : "#374151" }}>★</span>
+                          ))}
+                          <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 4, alignSelf: "center" }}>{myReceivedScore} 星</span>
+                        </div>
+                      )}
+                      {(() => {
+                        const otherAddr = isRequester ? r.provider?.toLowerCase() : r.actualRequester?.toLowerCase()
+                        const comment = otherAddr && ratingComments[otherAddr]?.comment
+                        return comment ? (
+                          <div style={{ fontSize: 13, color: "#d1d5db", lineHeight: 1.6, background: "#0f0f1a", borderRadius: 8, padding: "8px 10px" }}>"{comment}"</div>
+                        ) : <div style={{ fontSize: 12, color: "#4b5563" }}>对方未留文字评价</div>
+                      })()}
+                    </div>
+                  )}
+
+                  {/* 取消原因展示（已取消的服务） */}
+                  {r.status === 3 && cancelReasonData && (
+                    <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "10px 12px", fontSize: 13 }}>
+                      <span style={{ color: "#f87171" }}>取消原因：</span>
+                      <span style={{ color: "#9ca3af" }}>{cancelReasonData.reason || "未填写"}</span>
+                    </div>
+                  )}
+
+                  {/* 操作按钮 */}
+                  {!r.id?.startsWith("mock") && (r.status === 1 || r.status === 2) && (
+                    <div style={{ display: "flex", gap: 8, marginTop: "auto", paddingTop: 4, alignItems: "center" }}>
+                      {r.status === 1 && (
+                        <Btn small onClick={async () => {
+                          if (isRequester) {
+                            setActualHoursInput(r.hours); setActualHoursNote(""); setConfirmModal(r)
+                            setSelectedRecord(null)
+                          } else {
+                            setSubmitting(true)
+                            try {
+                              await (await contracts.service.confirmCompletion(r.id)).wait()
+                              pushNotification(r.actualRequester, {
+                                type: "completed", serviceId: r.id,
+                                message: `你的${TAG_NAMES[r.tag]}服务已完成，可以去提交评分了！`
+                              }).catch(() => {})
+                              toast("确认成功！"); load(); setSelectedRecord(null)
+                            } catch (e) { toast(e.reason || e.message, "error") }
+                            setSubmitting(false)
+                          }
+                        }} disabled={submitting
+                          || (isRequester && r.requesterConfirmed)
+                          || (!isRequester && r.providerConfirmed)}>
+                          {(isRequester && r.requesterConfirmed) || (!isRequester && r.providerConfirmed) ? "已确认，等待对方" : "确认完成"}
+                        </Btn>
+                      )}
+                      {r.status === 2 && (
+                        <Btn small secondary onClick={() => { setShowRating(true); setRatingScore(5); setRatingComment("") }}>
+                          提交评分
+                        </Btn>
+                      )}
+                      {r.status === 1 && !(r.requesterConfirmed && !isRequester) && (
+                        <button onClick={() => { setCancelModal(r); setCancelReason(""); setSelectedRecord(null) }}
+                          style={{ marginLeft: "auto", background: "none", border: "1px solid #374151", borderRadius: 8, padding: "6px 12px", color: "#6b7280", fontSize: 13, cursor: "pointer" }}>
+                          取消服务
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

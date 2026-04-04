@@ -54,7 +54,10 @@
 ### 我的主页
 - 查看 HRT 余额、服务均分、技能徽章解锁进度
 - HRT 贡献轨迹折线图（支持日 / 月 / 年切换）
-- 历史服务记录（含图片灯箱、地图、联系方式）
+- 历史服务记录（含图片灯箱、地图、联系方式，双列弹窗布局）
+- **HRT 流水记录**：接入 The Graph 索引，展示每笔收入/支出明细（注册奖励 / 服务收入 / 服务消费），附总收入/总支出/净增汇总
+- **站内通知系统**：服务被接单、完成、评分、取消均推送通知；点击通知自动跳转到对应服务详情
+- 服务取消：进行中的服务双方均可发起取消，填写原因存链下备查
 
 ### 社区排行榜
 - 本周 / 全年 HRT 贡献排名
@@ -124,11 +127,22 @@ graph TB
         F4[locations\n成员实时位置]
         F5[contacts\n双方联系方式]
         F6[actual_hours\n协商时长备注]
+        F7[notifications\n站内通知]
+        F8[cancel_reasons\n取消原因]
+        F9[rating_comments\n评价文字]
+    end
+
+    subgraph The Graph Studio
+        G1[Service 实体]
+        G2[Member 实体\nhrtFlows·avgScore]
+        G3[SkillBadge·Rating·HRTFlow]
     end
 
     U -->|连接钱包| 前端 React + Vite
     前端 React + Vite -->|ethers.js v6| 智能合约层 Avalanche Fuji / Hardhat
     前端 React + Vite -->|读写| 链下存储 Firebase Realtime DB
+    前端 React + Vite -->|GraphQL| The Graph Studio
+    智能合约层 Avalanche Fuji / Hardhat -->|事件索引| The Graph Studio
     SC1 -->|mint/burn| SC2
     SC1 -->|unlockRating| SC3
     SC3 -->|颁发 NFT| SC4
@@ -286,6 +300,31 @@ const burnEvents = await token.queryFilter(token.filters.ServiceBurn(address))
 
 ---
 
+#### HRT 流水记录（The Graph 索引）
+
+个人主页新增"HRT 流水"子标签，通过 The Graph Studio 部署的子图索引合约事件，一次 GraphQL 查询即可拿到完整流水历史：
+
+```graphql
+query Member($id: ID!) {
+  member(id: $id) {
+    hrtEarned
+    hrtSpent
+    hrtFlows(orderBy: timestamp, orderDirection: desc, first: 30) {
+      type      # "welcome" | "earn" | "spend"
+      amount
+      serviceId
+      timestamp
+    }
+  }
+}
+```
+
+与直接 `queryFilter` 相比，The Graph 索引响应速度快数倍，且支持跨区块范围聚合，不受 RPC 节点限制。
+
+子图索引 4 个合约（HerTimeService / HerTimeToken / HerTimeReputation / HerTimeSkillNFT），实体包括 Service / Member / SkillBadge / Rating / HRTFlow。
+
+---
+
 ### 技术栈总览
 
 | 层级 | 技术 | 用途 |
@@ -299,8 +338,9 @@ const burnEvents = await token.queryFilter(token.filters.ServiceBurn(address))
 | 数据可视化 | recharts AreaChart | HRT 贡献轨迹折线图（日/月/年） |
 | 地图 | react-leaflet + Leaflet | 附近成员地图、服务地点定位 |
 | 地址搜索 | Nominatim (OpenStreetMap) | 发布需求时关键词搜索地址坐标 |
-| 链下数据库 | Firebase Realtime Database | 图片、描述、联系方式、位置（免费套餐） |
+| 链下数据库 | Firebase Realtime Database | 图片、描述、联系方式、位置、通知、取消原因（免费套餐） |
 | 图片处理 | 浏览器 Canvas API | 图片压缩为 base64 JPEG，替代付费云存储 |
+| 索引查询 | The Graph Studio | HRT 流水记录、成员数据 GraphQL 查询 |
 | 隐私保护 | 坐标截断 + address(0) 隔离 | 位置模糊化 + 匿名身份保护 |
 
 ---
@@ -398,9 +438,14 @@ hertime/
 │   │   └── MapPage.jsx         # 全屏附近成员地图
 │   └── utils/
 │       ├── contracts.js        # ABI + 多网络地址加载（自动按 chainId 切换）
-│       ├── firebase.js         # 链下读写封装（位置/图片/联系方式/时长备注）
+│       ├── firebase.js         # 链下读写封装（位置/图片/联系方式/通知/取消原因）
+│       ├── graphQueries.js     # The Graph GraphQL 查询封装
 │       ├── deployed.localhost.json
 │       └── deployed.fuji.json
+├── subgraph/
+│   ├── subgraph.yaml           # 4 数据源配置（HerTimeService/Token/Reputation/SkillNFT）
+│   ├── schema.graphql          # 5 实体（Service/Member/SkillBadge/Rating/HRTFlow）
+│   └── src/                   # AssemblyScript 映射处理器
 └── hardhat.config.js
 ```
 
