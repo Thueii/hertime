@@ -211,7 +211,7 @@ function Lightbox({ src, onClose }) {
 
 // ── 通知面板 ─────────────────────────────────────────────────
 function NotificationPanel({ notifications, onClose, onNotifClick }) {
-  const typeIcon = { accepted: "🎉", confirm_needed: "⏳", completed: "✅", invited: "💌", cancelled: "🔔" }
+  const typeIcon = { accepted: "🎉", confirm_needed: "⏳", completed: "✅", invited: "💌", cancelled: "🔔", transfer: "💸" }
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 500 }} onClick={onClose}>
       <div style={{
@@ -431,6 +431,12 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
   const [ratingComments, setRatingComments] = useState({})
   const [myReceivedScore, setMyReceivedScore] = useState(null)
   const [ratingsRevealed, setRatingsRevealed] = useState(false)
+  // HRT 转赠
+  const [transferModal, setTransferModal] = useState(false)
+  const [transferTo, setTransferTo] = useState("")
+  const [transferAmount, setTransferAmount] = useState("")
+  const [transferNote, setTransferNote] = useState("")
+  const [transferring, setTransferring] = useState(false)
   // HRT 流水（The Graph）
   const [hrtFlows, setHrtFlows] = useState([])
   const [flowLoading, setFlowLoading] = useState(false)
@@ -586,6 +592,24 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
     setSubmitting(false)
   }
 
+  async function doTransfer() {
+    const amt = parseFloat(transferAmount)
+    if (!transferTo || isNaN(amt) || amt <= 0) return
+    if (amt > parseFloat(hrt)) { toast("HRT 余额不足", "error"); return }
+    setTransferring(true)
+    try {
+      await (await contracts.token.transfer(transferTo, ethers.parseEther(String(amt)))).wait()
+      pushNotification(transferTo, {
+        type: "transfer", serviceId: null,
+        message: `你收到了 ${account.slice(0,8)}...${account.slice(-6)} 转赠的 ${amt} HRT${transferNote ? `，附言：${transferNote}` : ""}`,
+      }).catch(() => {})
+      toast(`已成功转赠 ${amt} HRT`)
+      setTransferModal(false); setTransferTo(""); setTransferAmount(""); setTransferNote("")
+      load()
+    } catch (e) { toast(e.reason || e.message, "error") }
+    setTransferring(false)
+  }
+
   // 查询链上完成事件，获取真实时间戳
   useEffect(() => {
     if (!contracts || !account) return
@@ -701,7 +725,8 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
             </div>
             <div style={{ fontSize: 12, color: "#4b5563", marginTop: 2 }}>HerTime 成员</div>
           </div>
-          <div style={{ marginLeft: "auto" }}>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            <Btn small onClick={() => { setTransferModal(true); setTransferTo(""); setTransferAmount(""); setTransferNote("") }}>💸 转赠 HRT</Btn>
             <Btn secondary small onClick={load}>刷新数据</Btn>
           </div>
         </div>
@@ -1189,6 +1214,50 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
                 } catch (e) { toast(e.reason || e.message, "error") }
                 setSubmitting(false)
               }} disabled={submitting}>{submitting ? "结单中..." : "确认结单"}</Btn>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* 转赠 HRT modal */}
+      {transferModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
+          onClick={() => setTransferModal(false)}>
+          <Card style={{ width: 420, maxWidth: "92vw" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, color: "#e5e7eb", fontSize: 16, marginBottom: 4 }}>💸 转赠 HRT</div>
+            <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 20 }}>
+              当前余额 <strong style={{ color: "#c4b5fd" }}>{parseFloat(hrt).toFixed(1)} HRT</strong>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, color: "#9ca3af", marginBottom: 6 }}>收款地址</div>
+                <input value={transferTo} onChange={e => setTransferTo(e.target.value)}
+                  placeholder="0x..."
+                  style={{ width: "100%", background: "#0f0f1a", border: "1px solid #2d2d3d", borderRadius: 8, padding: "9px 12px", color: "#e5e7eb", fontSize: 13, boxSizing: "border-box", fontFamily: "monospace" }} />
+              </div>
+
+              <div>
+                <div style={{ fontSize: 13, color: "#9ca3af", marginBottom: 6 }}>转赠数量（HRT）</div>
+                <input type="number" min="0.1" step="0.1" value={transferAmount} onChange={e => setTransferAmount(e.target.value)}
+                  placeholder="例：1.5"
+                  style={{ width: "100%", background: "#0f0f1a", border: "1px solid #2d2d3d", borderRadius: 8, padding: "9px 12px", color: "#c4b5fd", fontSize: 16, fontWeight: 700, boxSizing: "border-box" }} />
+              </div>
+
+              <div>
+                <div style={{ fontSize: 13, color: "#9ca3af", marginBottom: 6 }}>附言 <span style={{ color: "#4b5563" }}>（可选）</span></div>
+                <input value={transferNote} onChange={e => setTransferNote(e.target.value)}
+                  placeholder="例：妈妈，这是我帮邻居积累的，你留着用"
+                  style={{ width: "100%", background: "#0f0f1a", border: "1px solid #2d2d3d", borderRadius: 8, padding: "9px 12px", color: "#e5e7eb", fontSize: 13, boxSizing: "border-box" }} />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 22 }}>
+              <Btn secondary small onClick={() => setTransferModal(false)}>取消</Btn>
+              <Btn small onClick={doTransfer}
+                disabled={transferring || !transferTo || !transferAmount || parseFloat(transferAmount) <= 0}>
+                {transferring ? "转赠中..." : "确认转赠"}
+              </Btn>
             </div>
           </Card>
         </div>
