@@ -677,6 +677,13 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
   const mergedSkills = registered ? skills.map((s, i) => s || MOCK_SKILLS[i]) : [...skills]
   const unlockedCount = mergedSkills.filter(Boolean).length
 
+  // serviceId → tag 反查表（给真实流水补充服务类型）
+  const serviceTagMap = useMemo(() => {
+    const map = {}
+    myServices.forEach(s => { map[s.id] = s.tag })
+    return map
+  }, [myServices])
+
   // HRT 流水：真实链上 + 转账(Firebase) + mock
   const transferFlowsMapped = transferFlows.map(f => ({
     id: "tf-" + f.timestamp + f.type,
@@ -875,10 +882,16 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
                       : f.type === "transfer_in" ? "转账收入"
                       : "转账支出"
                     const icon = f.type === "welcome" ? "🎁"
-                      : f.type === "transfer_in" ? "💸"
-                      : f.type === "transfer_out" ? "💸"
+                      : f.type === "transfer_in" || f.type === "transfer_out" ? "💸"
                       : isEarn ? "↑" : "↓"
                     const isMock = f.id?.startsWith("mf-")
+                    // 真实流水从 serviceTagMap 反查 tag
+                    const tag = f.tag !== null && f.tag !== undefined ? f.tag
+                      : (f.serviceId ? serviceTagMap[f.serviceId] : undefined)
+                    // 转账副标题：地址 + 附言合成一行
+                    const transferSub = f.counterpart
+                      ? `${f.type === "transfer_in" ? "来自" : "转至"} ${f.counterpart.slice(0,8)}...${f.counterpart.slice(-6)}${f.note ? ` · "${f.note}"` : ""}`
+                      : null
                     const date = new Date(f.timestamp * 1000).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
                     return (
                       <div key={f.id} style={{
@@ -895,16 +908,14 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ fontSize: 13, fontWeight: 600, color: "#d1d5db" }}>{label}</span>
-                            {f.tag !== null && <span style={{ fontSize: 11, color: "#6b7280" }}>{TAG_EMOJIS[f.tag]} {TAG_NAMES[f.tag]}</span>}
+                            {tag !== undefined && tag !== null && (
+                              <span style={{ fontSize: 11, color: "#6b7280" }}>{TAG_EMOJIS[tag]} {TAG_NAMES[tag]}</span>
+                            )}
                             {isMock && <span style={{ fontSize: 10, color: "#374151", border: "1px solid #2d2d3d", borderRadius: 4, padding: "1px 5px" }}>样本</span>}
                           </div>
-                          {f.counterpart && (
-                            <div style={{ fontSize: 11, color: "#4b5563", marginTop: 1, fontFamily: "monospace" }}>
-                              {f.type === "transfer_in" ? "来自" : "转至"} {f.counterpart.slice(0,8)}...{f.counterpart.slice(-6)}
-                            </div>
-                          )}
-                          {f.note && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>"{f.note}"</div>}
-                          <div style={{ fontSize: 11, color: "#374151", marginTop: 1 }}>{date}</div>
+                          <div style={{ fontSize: 11, color: "#4b5563", marginTop: 2 }}>
+                            {transferSub ? <span style={{ fontFamily: transferSub.startsWith("来自") || transferSub.startsWith("转至") ? "inherit" : "monospace" }}>{transferSub} · {date}</span> : date}
+                          </div>
                         </div>
                         <div style={{ fontSize: 17, fontWeight: 800, color: isEarn ? "#34d399" : "#f87171", flexShrink: 0 }}>
                           {isEarn ? "+" : "-"}{parseFloat(f.amount).toFixed(1)} <span style={{ fontSize: 11 }}>HRT</span>
