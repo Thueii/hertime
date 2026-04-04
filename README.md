@@ -101,49 +101,52 @@
 
 ```mermaid
 graph TB
-    subgraph 用户层
-        U[用户 · MetaMask 钱包]
+    subgraph USER["用户层"]
+        U["用户 · MetaMask 钱包"]
     end
 
-    subgraph 前端 React + Vite
-        A[IntroPage 项目介绍]
-        B[BoardTab 需求广场]
-        C[PostTab 发布需求]
-        D[ProfileTab 我的主页]
-        E[LeaderboardTab 排行榜]
-        F[MapPage 附近成员地图]
+    subgraph FE["前端 React + Vite"]
+        A["IntroPage 项目介绍"]
+        B["BoardTab 需求广场"]
+        C["PostTab 发布需求"]
+        D["ProfileTab 我的主页"]
+        E["LeaderboardTab 排行榜"]
+        FM["MapPage 附近成员地图"]
     end
 
-    subgraph 智能合约层 Avalanche Fuji / Hardhat
-        SC1[HerTimeService\n发布·接单·确认·协商时长]
-        SC2[HerTimeToken ERC20\n1 HRT = 1h · 0.1h 精度]
-        SC3[HerTimeReputation\n双盲评分·均分统计]
-        SC4[HerTimeSkillNFT ERC721\nSoulbound 技能徽章]
+    subgraph SC["智能合约层 Avalanche Fuji / Hardhat"]
+        SC1["HerTimeService\n发布·接单·确认·协商时长"]
+        SC2["HerTimeToken ERC20\n1 HRT = 1h · 0.1h 精度"]
+        SC3["HerTimeReputation\n双盲评分·均分统计"]
+        SC4["HerTimeSkillNFT ERC721\nSoulbound 技能徽章"]
     end
 
-    subgraph 链下存储 Firebase Realtime DB
-        F1[service_details\n描述·期望时间]
-        F2[service_images\nCanvas base64 图片]
-        F3[service_locations\n见面地点坐标]
-        F4[locations\n成员实时位置]
-        F5[contacts\n双方联系方式]
-        F6[actual_hours\n协商时长备注]
-        F7[notifications\n站内通知]
-        F8[cancel_reasons\n取消原因]
-        F9[rating_comments\n评价文字]
+    subgraph FB["链下存储 Firebase Realtime DB"]
+        F1["service_details\n描述·期望时间"]
+        F2["service_images\nCanvas base64 图片"]
+        F3["service_locations\n见面地点坐标"]
+        F4["locations\n成员实时位置"]
+        F5["contacts\n双方联系方式"]
+        F6["actual_hours\n协商时长备注"]
+        F7["notifications\n站内通知"]
+        F8["cancel_reasons\n取消原因"]
+        F9["rating_comments\n评价文字"]
     end
 
-    subgraph The Graph Studio
-        G1[Service 实体]
-        G2[Member 实体\nhrtFlows·avgScore]
-        G3[SkillBadge·Rating·HRTFlow]
+    subgraph GR["The Graph Studio"]
+        G1["Service 实体"]
+        G2["Member 实体\nhrtFlows·avgScore"]
+        G3["SkillBadge·Rating·HRTFlow"]
     end
 
-    U -->|连接钱包| 前端 React + Vite
-    前端 React + Vite -->|ethers.js v6| 智能合约层 Avalanche Fuji / Hardhat
-    前端 React + Vite -->|读写| 链下存储 Firebase Realtime DB
-    前端 React + Vite -->|GraphQL| The Graph Studio
-    智能合约层 Avalanche Fuji / Hardhat -->|事件索引| The Graph Studio
+    U -->|连接钱包| B
+    B -->|ethers.js v6| SC1
+    D -->|ethers.js v6| SC2
+    C -->|读写| F1
+    D -->|读写| F7
+    D -->|GraphQL| G2
+    SC1 -->|事件索引| G1
+    SC2 -->|事件索引| G2
     SC1 -->|mint/burn| SC2
     SC1 -->|unlockRating| SC3
     SC3 -->|颁发 NFT| SC4
