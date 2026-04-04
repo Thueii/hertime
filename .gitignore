@@ -1,0 +1,24 @@
+# 私钥和环境变量
+.env
+.env.local
+.env.*.local
+
+# Hardhat
+artifacts/
+cache/
+typechain-types/
+
+# Node
+node_modules/
+
+# 前端构建产物
+frontend/dist/
+frontend/node_modules/
+
+# 子图编译产物
+subgraph/build/
+subgraph/generated/
+subgraph/node_modules/
+
+# 系统文件
+.DS_Store
