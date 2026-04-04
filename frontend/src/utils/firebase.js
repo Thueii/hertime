@@ -232,6 +232,26 @@ export async function saveCancelReason(serviceId, cancellerAddress, reason) {
   })
 }
 
+// ── HRT 转账记录 ──────────────────────────────────────────────
+
+// 保存一条转账记录到某地址的流水（sender 和 receiver 各调用一次）
+export async function saveTransferRecord(address, record) {
+  const key = address.toLowerCase()
+  const r = push(ref(db, `hrt_transfers/${key}`))
+  await set(r, { ...record, timestamp: record.timestamp || Date.now() })
+}
+
+// 订阅某地址的转账流水
+export function subscribeTransferRecords(address, callback) {
+  if (!address) return () => {}
+  const key = address.toLowerCase()
+  return onValue(ref(db, `hrt_transfers/${key}`), (snapshot) => {
+    const data = snapshot.val() || {}
+    const list = Object.values(data).sort((a, b) => b.timestamp - a.timestamp)
+    callback(list)
+  })
+}
+
 // 订阅取消原因
 export function subscribeCancelReason(serviceId, callback) {
   const key = serviceId.replace(/^0x/, "")

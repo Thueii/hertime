@@ -4,7 +4,7 @@ import { ethers } from "ethers"
 import { MapContainer, TileLayer, CircleMarker, Popup, Marker, useMapEvents, useMap } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import { getContracts } from "../utils/contracts"
-import { reportLocation, removeLocation, saveServiceLocation, subscribeServiceLocations, subscribeLocations, saveServiceDetail, subscribeServiceDetails, saveContact, subscribeContacts, compressImageToBase64, saveServiceImages, subscribeAllServiceImages, saveActualHours, pushNotification, subscribeNotifications, markNotificationsRead, saveRatingComment, subscribeRatingComments, saveCancelReason, subscribeCancelReason } from "../utils/firebase"
+import { reportLocation, removeLocation, saveServiceLocation, subscribeServiceLocations, subscribeLocations, saveServiceDetail, subscribeServiceDetails, saveContact, subscribeContacts, compressImageToBase64, saveServiceImages, subscribeAllServiceImages, saveActualHours, pushNotification, subscribeNotifications, markNotificationsRead, saveRatingComment, subscribeRatingComments, saveCancelReason, subscribeCancelReason, saveTransferRecord, subscribeTransferRecords } from "../utils/firebase"
 import { fetchMember } from "../utils/graphQueries"
 
 // 球面距离（km）
@@ -441,6 +441,8 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
   const [hrtFlows, setHrtFlows] = useState([])
   const [flowLoading, setFlowLoading] = useState(false)
   const [memberStats, setMemberStats] = useState(null)
+  // 转账流水（Firebase）
+  const [transferFlows, setTransferFlows] = useState([])
 
   // 从 The Graph 拉取 HRT 流水记录
   useEffect(() => {
@@ -471,6 +473,13 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
     const u3 = subscribeServiceLocations(setSvcLocations)
     return () => { u1(); u2(); u3() }
   }, [])
+
+  // 订阅转账流水
+  useEffect(() => {
+    if (!account) return
+    const unsub = subscribeTransferRecords(account, setTransferFlows)
+    return () => unsub()
+  }, [account])
 
   // 打开记录详情时订阅联系方式 + 拉对方评分 + 评论
   useEffect(() => {
@@ -599,6 +608,12 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
     setTransferring(true)
     try {
       await (await contracts.token.transfer(transferTo, ethers.parseEther(String(amt)))).wait()
+      const ts = Date.now()
+      // 双方各存一条流水记录
+      await Promise.all([
+        saveTransferRecord(account,    { type: "transfer_out", amount: String(amt), counterpart: transferTo,  note: transferNote, timestamp: ts }),
+        saveTransferRecord(transferTo, { type: "transfer_in",  amount: String(amt), counterpart: account,     note: transferNote, timestamp: ts }),
+      ]).catch(() => {})
       pushNotification(transferTo, {
         type: "transfer", serviceId: null,
         message: `你收到了 ${account.slice(0,8)}...${account.slice(-6)} 转赠的 ${amt} HRT${transferNote ? `，附言：${transferNote}` : ""}`,
@@ -662,12 +677,21 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
   const mergedSkills = registered ? skills.map((s, i) => s || MOCK_SKILLS[i]) : [...skills]
   const unlockedCount = mergedSkills.filter(Boolean).length
 
-  // HRT 流水：真实数据 + 已注册时叠加 mock
+  // HRT 流水：真实链上 + 转账(Firebase) + mock
+  const transferFlowsMapped = transferFlows.map(f => ({
+    id: "tf-" + f.timestamp + f.type,
+    type: f.type,
+    amount: f.amount,
+    counterpart: f.counterpart,
+    note: f.note,
+    timestamp: Math.floor(f.timestamp / 1000),
+    tag: null,
+  }))
   const mergedFlows = registered
-    ? [...hrtFlows, ...MOCK_HRT_FLOWS].sort((a, b) => b.timestamp - a.timestamp)
-    : hrtFlows
-  const totalEarned = mergedFlows.filter(f => f.type !== "spend").reduce((s, f) => s + parseFloat(f.amount), 0)
-  const totalSpent  = mergedFlows.filter(f => f.type === "spend").reduce((s, f) => s + parseFloat(f.amount), 0)
+    ? [...hrtFlows, ...transferFlowsMapped, ...MOCK_HRT_FLOWS].sort((a, b) => b.timestamp - a.timestamp)
+    : [...hrtFlows, ...transferFlowsMapped].sort((a, b) => b.timestamp - a.timestamp)
+  const totalEarned = mergedFlows.filter(f => f.type !== "spend" && f.type !== "transfer_out").reduce((s, f) => s + parseFloat(f.amount), 0)
+  const totalSpent  = mergedFlows.filter(f => f.type === "spend" || f.type === "transfer_out").reduce((s, f) => s + parseFloat(f.amount), 0)
 
   const recordItem = (s, role) => (
     <div key={s.id} onClick={() => setSelectedRecord({ ...s, role })}
@@ -844,8 +868,16 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
                 {/* 流水列表 */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {mergedFlows.map(f => {
-                    const isEarn = f.type !== "spend"
-                    const label = f.type === "welcome" ? "注册奖励" : f.type === "earn" ? "服务收入" : "服务消费"
+                    const isEarn = f.type !== "spend" && f.type !== "transfer_out"
+                    const label = f.type === "welcome" ? "注册奖励"
+                      : f.type === "earn" ? "服务收入"
+                      : f.type === "spend" ? "服务消费"
+                      : f.type === "transfer_in" ? "转账收入"
+                      : "转账支出"
+                    const icon = f.type === "welcome" ? "🎁"
+                      : f.type === "transfer_in" ? "💸"
+                      : f.type === "transfer_out" ? "💸"
+                      : isEarn ? "↑" : "↓"
                     const isMock = f.id?.startsWith("mf-")
                     const date = new Date(f.timestamp * 1000).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
                     return (
@@ -859,14 +891,20 @@ function ProfileTab({ account, contracts, toast, registered, pendingServiceId, o
                           background: isEarn ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: 15,
-                        }}>{f.type === "welcome" ? "🎁" : isEarn ? "↑" : "↓"}</div>
+                        }}>{icon}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ fontSize: 13, fontWeight: 600, color: "#d1d5db" }}>{label}</span>
                             {f.tag !== null && <span style={{ fontSize: 11, color: "#6b7280" }}>{TAG_EMOJIS[f.tag]} {TAG_NAMES[f.tag]}</span>}
                             {isMock && <span style={{ fontSize: 10, color: "#374151", border: "1px solid #2d2d3d", borderRadius: 4, padding: "1px 5px" }}>样本</span>}
                           </div>
-                          <div style={{ fontSize: 11, color: "#4b5563", marginTop: 2 }}>{date}</div>
+                          {f.counterpart && (
+                            <div style={{ fontSize: 11, color: "#4b5563", marginTop: 1, fontFamily: "monospace" }}>
+                              {f.type === "transfer_in" ? "来自" : "转至"} {f.counterpart.slice(0,8)}...{f.counterpart.slice(-6)}
+                            </div>
+                          )}
+                          {f.note && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>"{f.note}"</div>}
+                          <div style={{ fontSize: 11, color: "#374151", marginTop: 1 }}>{date}</div>
                         </div>
                         <div style={{ fontSize: 17, fontWeight: 800, color: isEarn ? "#34d399" : "#f87171", flexShrink: 0 }}>
                           {isEarn ? "+" : "-"}{parseFloat(f.amount).toFixed(1)} <span style={{ fontSize: 11 }}>HRT</span>
