@@ -361,6 +361,28 @@ export default function IntroPage({ onEnterDemo }) {
         </div>
       </section>
 
+      {/* ─── 设计理念 ───────────────────────────────────────── */}
+      <section style={s.section}>
+        <div style={{ ...s.sectionInner, maxWidth: 720, textAlign: "center" }}>
+          <SectionLabel>设计理念</SectionLabel>
+          <h2 style={s.h2}>为什么是时间，不是金钱</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 32, textAlign: "left" }}>
+            <p style={{ ...s.originText, fontSize: 16, lineHeight: 1.9 }}>
+              现有社会用金钱衡量一切。有钱人可以买服务，没钱的老人只能等、熬、被忽视。
+              资本主义把人分成三六九等——但时间不是。
+            </p>
+            <p style={{ ...s.originText, fontSize: 16, lineHeight: 1.9 }}>
+              每个人一天都只有 24 小时。不管你是教授，还是保洁员，
+              你付出的 1 小时陪伴，<strong style={{ color: "#f9a8d4" }}>价值完全相等。</strong>
+            </p>
+            <p style={{ ...s.originText, fontSize: 16, lineHeight: 1.9, borderLeft: "3px solid #f9a8d4", paddingLeft: 20, marginTop: 8 }}>
+              我的初心很简单：打造一个女性养老的乌托邦，用时间重新定义价值，而不是用金钱。
+              <br />HerTime，就是那个天平。
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ─── CTA ────────────────────────────────────────────── */}
       <section style={s.ctaSection}>
         <div style={s.ctaBg} />
