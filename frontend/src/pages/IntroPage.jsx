@@ -158,7 +158,7 @@ export default function IntroPage({ onEnterDemo }) {
       <section style={s.section}>
         <div style={s.sectionInner}>
           <SectionLabel>核心功能</SectionLabel>
-          <h2 style={s.h2}>核心功能模块</h2>
+          <h2 style={s.h2}>九大功能模块</h2>
           <div style={s.featureGrid}>
             {[
               {
@@ -195,6 +195,11 @@ export default function IntroPage({ onEnterDemo }) {
                 icon: "🛡️", color: "#f97316", title: "邀请制准入",
                 subtitle: "isInvited 链上映射",
                 desc: "部署者自动获得邀请资格，已注册成员可邀请新人，管理员可批量邀请。链上验证防止滥注册，保障互助社群质量。",
+              },
+              {
+                icon: "💸", color: "#10b981", title: "HRT 转赠",
+                subtitle: "ERC-20 transfer · Firebase 流水",
+                desc: "可将 HRT 直接转给任意地址，支持填写附言。典型场景：女儿在社区帮扶积累时长后转给外地父母，父母用于接受当地服务——真正实现代际、跨地域的时间流通。",
               },
               {
                 icon: "📊", color: "#a855f7", title: "The Graph 索引 · HRT 流水",
