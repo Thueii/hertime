@@ -372,7 +372,7 @@ export default function IntroPage({ onEnterDemo }) {
               资本主义把人分成三六九等——但时间不是。
             </p>
             <p style={{ ...s.originText, fontSize: 16, lineHeight: 1.9 }}>
-              每个人一天都只有 24 小时。不管你是教授，还是保洁员，
+              每个人一天都只有 24 小时。不论你是什么职业，
               你付出的 1 小时陪伴，<strong style={{ color: "#f9a8d4" }}>价值完全相等。</strong>
             </p>
             <p style={{ ...s.originText, fontSize: 16, lineHeight: 1.9, borderLeft: "3px solid #f9a8d4", paddingLeft: 20, marginTop: 8 }}>
