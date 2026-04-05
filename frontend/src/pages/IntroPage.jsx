@@ -30,18 +30,24 @@ export default function IntroPage({ onEnterDemo }) {
           <h2 style={s.h2}>这个项目是怎么来的</h2>
           <div style={s.originBlock}>
             <p style={s.originText}>
-              有一种善意，每天都在发生，却从未被看见——
-              邻居阿姨陪你去看病，楼上姐姐教你用手机，
-              素不相识的女性，在彼此最需要的时候出现。
-              这种善意不应该消失在空气里，它应该被记住，被传递，有一天回到她自己身上。
+              越来越多的女性选择不婚、不育。
+              这是自由，是觉醒，但也带来一个现实问题：<strong style={{ color: "#f9a8d4" }}>老了怎么办？</strong>
             </p>
             <p style={s.originText}>
-              HerTime 相信：<strong style={{ color: "#f9a8d4" }}>女性之间的互助，可以构成一张跨越时间的安全网。</strong>
+              传统养老的逻辑建立在"有家庭"的假设上——子女送终，配偶照料。
+              当这个假设不再成立，没有孩子、没有伴侣的女性，
+              面对的是一个几乎没有为她们设计过的养老体系。
+              这不是小众焦虑。这是一整代人正在逼近的现实。
+            </p>
+            <p style={s.originText}>
+              HerTime 由此而来——<strong style={{ color: "#f9a8d4" }}>一个专门为女性设计的互助养老时间银行。</strong>
+              不依赖家庭，不依赖金钱，依靠彼此。
+              年轻时帮助别人，年老时由人帮助。
+              用区块链确保每一小时的付出都被记录、都能兑换、永远不会消失。        
+            </p>
+            <p style={s.originText}>
+              HerTime 相信：<strong style={{ color: "#f9a8d4" }}>女性之间的互助，可以构成一张跨越时间的安全网。 </strong>
               年轻时帮助别人，年老时由人帮助——不靠金钱，不靠运气，靠每一小时真实付出积累的信任。
-            </p>
-            <p style={s.originText}>
-              传统互助平台锁死在单一平台，平台停运一切清零，跨城市更是无从兑换。
-              HerTime 用智能合约重建信任：<strong style={{ color: "#f9a8d4" }}>Token 存在你自己的钱包，平台可以倒闭，你的付出永远存在。</strong>
             </p>
           </div>
         </div>
