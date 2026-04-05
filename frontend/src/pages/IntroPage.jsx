@@ -7,10 +7,10 @@ export default function IntroPage({ onEnterDemo }) {
         <div style={s.heroBg} />
         <div style={s.heroContent}>
           <h1 style={s.heroTitle}>HerTime</h1>
-          <p style={s.heroSub}>那些不被看见的付出，从此有迹可循</p>
+          <p style={s.heroSub}>基于区块链的女性互助养老时间银行</p>
           <div style={s.heroDivider} />
           <p style={s.heroDesc}>
-            基于区块链的女性互助养老时间银行协议，用链上 Token 记录每一小时的付出
+            那些不被看见的付出，从此有迹可循
           </p>
           <div style={s.badges}>
             <span style={s.badge}>Avalanche Fuji Testnet</span>
