@@ -29,24 +29,37 @@ export default function IntroPage({ onEnterDemo }) {
           <SectionLabel>项目起源</SectionLabel>
           <h2 style={s.h2}>这个项目是怎么来的</h2>
           <div style={s.originBlock}>
-            <p style={s.originText}>
-              越来越多的女性选择不婚、不育。
-              这是自由，是觉醒，但也带来一个现实问题：<strong style={{ color: "#f9a8d4" }}>老了怎么办？</strong>
+            {/* 大字引入 */}
+            <p style={{ fontSize: 20, fontWeight: 600, color: "#f3f4f6", lineHeight: 1.7, marginBottom: 20 }}>
+              越来越多的女性选择不婚、不育。<br />
+              这是自由，是觉醒——<span style={{ color: "#f9a8d4" }}>但老了怎么办？</span>
             </p>
+
+            {/* 正文 */}
             <p style={s.originText}>
               传统养老的逻辑建立在"有家庭"的假设上——子女送终，配偶照料。
               当这个假设不再成立，没有孩子、没有伴侣的女性，
               面对的是一个几乎没有为她们设计过的养老体系。
-              这不是小众焦虑。这是一整代人正在逼近的现实。
             </p>
-            <p style={s.originText}>
-              HerTime 由此而来——<strong style={{ color: "#f9a8d4" }}>一个专门为女性设计的互助养老时间银行。</strong>
-              不依赖家庭，不依赖金钱，依靠彼此。
-              年轻时帮助别人，年老时由人帮助。
-              用区块链确保每一小时的付出都被记录、都能兑换、永远不会消失。        
-            </p>
-            <p style={s.originText}>
-              HerTime 相信：<strong style={{ color: "#f9a8d4" }}>女性之间的互助，可以构成一张跨越时间的安全网。 </strong>
+
+            {/* 强调句 */}
+            <div style={{ borderLeft: "3px solid #f9a8d4", paddingLeft: 16, margin: "16px 0", color: "#f9a8d4", fontWeight: 600, fontSize: 16, lineHeight: 1.7 }}>
+              这不是小众焦虑。<br />这是一整代人正在逼近的现实。
+            </div>
+
+            {/* 解法卡片 */}
+            <div style={{ background: "rgba(249,168,212,0.07)", border: "1px solid rgba(249,168,212,0.2)", borderRadius: 12, padding: "18px 20px", marginTop: 8 }}>
+              <div style={{ color: "#f9a8d4", fontWeight: 700, fontSize: 15, marginBottom: 10 }}>HerTime 由此而来</div>
+              <p style={{ ...s.originText, margin: 0, color: "#e5e7eb" }}>
+                不依赖家庭，不依赖金钱，依靠彼此。
+                年轻时帮助别人，年老时由人帮助——
+                用区块链确保每一小时的付出都被记录、都能兑换、<strong style={{ color: "#f9a8d4" }}>永远不会消失。</strong>
+              </p>
+            </div>
+
+            {/* 信念句 */}
+            <p style={{ ...s.originText, marginTop: 20, color: "#9ca3af" }}>
+              HerTime 相信：<strong style={{ color: "#f9a8d4" }}>女性之间的互助，可以构成一张跨越时间的安全网。</strong>
               年轻时帮助别人，年老时由人帮助——不靠金钱，不靠运气，靠每一小时真实付出积累的信任。
             </p>
           </div>
